@@ -2,8 +2,10 @@ from starlette.applications import Starlette
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
+from pats import settings
 
-app = Starlette(debug=True)
+
+app = Starlette(debug=settings.DEBUG)
 
 
 @app.route("/")

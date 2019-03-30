@@ -1,6 +1,8 @@
 import uvicorn
 
-from ats.app import app
+from pats import settings
 
 
-uvicorn.run(app, host="0.0.0.0", port=8000)
+uvicorn.run(
+    "pats.app:app", host="0.0.0.0", port=settings.PORT, reload=settings.DEBUG
+)
