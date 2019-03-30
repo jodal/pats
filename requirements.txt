@@ -4,6 +4,8 @@
 #
 #    pip-compile 
 #
+aiofiles==0.4.0
+bootstrap4==0.1.0
 click==7.0                # via uvicorn
 h11==0.8.1                # via uvicorn
 httptools==0.0.13         # via uvicorn

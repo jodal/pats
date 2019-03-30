@@ -3,3 +3,9 @@ starlette
 
 # App server
 uvicorn
+
+# To serve static files
+aiofiles
+
+# Bootstrap 4 CSS framework
+bootstrap4
