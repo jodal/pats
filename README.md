@@ -1,4 +1,4 @@
-# Twitter streaming search
+# PATS - Python asyncio Twitter Search
 
 ## Views
 
@@ -16,14 +16,3 @@ At the free level, the API only supports a single connection.
 However, the connection can filter on up to 400 keywords.
 Changing the filters requires the connection to be reconnected,
 potentially loosing tweets.
-
-## Technology
-
-### Rust
-
-- [twitter-stream](https://crates.io/crates/twitter-stream)
-
-### Python
-
-- [twitter](https://pypi.org/project/twitter/)
-- [tweetstream](https://pypi.org/project/tweetstream/)
