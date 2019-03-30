@@ -1,0 +1,5 @@
+# ASGI web framework
+starlette
+
+# App server
+uvicorn

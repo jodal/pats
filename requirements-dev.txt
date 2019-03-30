@@ -1,0 +1,11 @@
+# Production dependencies
+-r requirements.txt
+
+# Code formatting
+black
+
+# Linting
+flake8
+
+# Type checking
+mypy
