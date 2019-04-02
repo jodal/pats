@@ -6,10 +6,20 @@
 #
 aiofiles==0.4.0
 bootstrap4==0.1.0
+certifi==2019.3.9         # via requests
+chardet==3.0.4            # via requests
 click==7.0                # via uvicorn
 h11==0.8.1                # via uvicorn
 httptools==0.0.13         # via uvicorn
+idna==2.8                 # via requests
+oauthlib==3.0.1           # via requests-oauthlib
+pysocks==1.6.8            # via tweepy
+requests-oauthlib==1.2.0  # via tweepy
+requests==2.21.0          # via requests-oauthlib, tweepy
+six==1.12.0               # via tweepy
 starlette==0.11.4
+tweepy==3.7.0
+urllib3==1.24.1           # via requests
 uvicorn==0.6.1
 uvloop==0.12.2            # via uvicorn
 websockets==7.0           # via uvicorn
