@@ -14,8 +14,16 @@ function addTweet(status) {
   streamEl.prepend(tweetEl);
 }
 
-const ws = new WebSocket("ws://localhost:8000/ws");
-ws.onmessage = function(event) {
-  const status = JSON.parse(event.data);
-  addTweet(status);
-};
+function connect() {
+  const ws = new WebSocket("ws://localhost:8000/ws");
+  ws.onmessage = function(event) {
+    const status = JSON.parse(event.data);
+    addTweet(status);
+  };
+  ws.onclose = function(event) {
+    // TODO Add exponential backoff
+    setTimeout(connect, 2000);
+  };
+}
+
+connect();
