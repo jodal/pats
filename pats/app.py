@@ -10,6 +10,7 @@ from pats import settings, twitter
 
 logger = logging.getLogger(__name__)
 
+sample_stream = twitter.SampleStream()
 
 app = Starlette(debug=settings.DEBUG)
 
@@ -25,16 +26,15 @@ class SampleStream(WebSocketEndpoint):
 
     async def on_connect(self, websocket):
         await websocket.accept()
-        self.stream, queue = twitter.create_stream()
-        self.stream.sample(is_async=True, languages=["en", "no"])
-
+        logger.info("WebSocket connected")
+        self.subscription_id, queue = sample_stream.subscribe()
         while True:
             status = await queue.get()
             await websocket.send_json(status)
 
     async def on_disconnect(self, websocket, close_code):
         logger.info("WebSocket disconnected")
-        self.stream.disconnect()
+        sample_stream.unsubscribe(self.subscription_id)
 
 
 app.mount(

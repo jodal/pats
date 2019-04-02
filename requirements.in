@@ -10,5 +10,6 @@ aiofiles
 # Bootstrap 4 CSS framework
 bootstrap4
 
-# Twitter client
-tweepy
+# HTTP and OAuth client
+aiohttp
+aioauth-client
