@@ -60,9 +60,18 @@ class Stream:
         if keywords:
             params["track"] = ",".join(keywords)
 
-        logger.info(f"Connecting to Twitter {self.__class__.__name__}")
         response = await client.request(self.method, self.url, params=params)
+
+        if response.status == 420:
+            logger.warning("Rate limited by Twitter; waiting 60s")
+            await asyncio.sleep(60)  # TODO Add exponential backoff
+            self._running.clear()
+            await self._connect()
+            return
+
         response.raise_for_status()
+
+        logger.info(f"Connected to Twitter {self.__class__.__name__}")
 
         while self._running.is_set() and not response.connection.closed:
             await self._read_item(response)
