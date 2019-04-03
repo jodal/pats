@@ -2,7 +2,7 @@ import asyncio
 import logging
 import json
 import uuid
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 from aioauth_client import TwitterClient
 
@@ -55,11 +55,14 @@ class Stream:
             return
         self._running.set()
 
+        params = {"delimited": "length"}
+        keywords = {k for (_, k) in self._subscribers.values() if k is not None}
+        if keywords:
+            params["track"] = ",".join(keywords)
+
         logger.info(f"Connecting to Twitter {self.__class__.__name__}")
-        response = await client.request(
-            self.method, self.url, params={"delimited": "length"}
-        )
-        logger.info("Connected")
+        response = await client.request(self.method, self.url, params=params)
+        response.raise_for_status()
 
         while self._running.is_set() and not response.connection.closed:
             await self._read_item(response)
