@@ -1,3 +1,26 @@
+function showFilter() {
+  const url = new URL(document.location);
+  const filter = url.searchParams.get("filter");
+  document.querySelector("input[name='filter']").value = filter;
+}
+
+function connect() {
+  const protocol = window.location.protocol == "http:" ? "ws" : "wss";
+  const ws = new WebSocket(
+    `${protocol}://${document.location.host}/ws${document.location.search}`
+  );
+
+  ws.onmessage = function(event) {
+    const status = JSON.parse(event.data);
+    addTweet(status);
+  };
+
+  ws.onclose = function(event) {
+    // TODO Add exponential backoff
+    setTimeout(connect, 2000);
+  };
+}
+
 const tweetTemplate = document.querySelector("template#tweet");
 const streamEl = document.querySelector("#stream");
 
@@ -12,18 +35,9 @@ function addTweet(status) {
   tweetEl.querySelector(".created-at").innerText = status.created_at;
   tweetEl.querySelector(".text").innerText = status.text;
   streamEl.prepend(tweetEl);
+
+  // TODO Trim length of page to not use infinite memory
 }
 
-function connect() {
-  const ws = new WebSocket("ws://localhost:8000/ws");
-  ws.onmessage = function(event) {
-    const status = JSON.parse(event.data);
-    addTweet(status);
-  };
-  ws.onclose = function(event) {
-    // TODO Add exponential backoff
-    setTimeout(connect, 2000);
-  };
-}
-
+showFilter();
 connect();
