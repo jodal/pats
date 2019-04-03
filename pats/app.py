@@ -5,6 +5,8 @@ from starlette.endpoints import WebSocketEndpoint
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
+from websockets.exceptions import ConnectionClosed
+
 from pats import settings, twitter
 
 
@@ -39,11 +41,15 @@ class TwitterStream(WebSocketEndpoint):
             self.unsubscribe = lambda: sample_stream.unsubscribe(sub_id)
 
         while True:
-            status = await queue.get()
-            await websocket.send_json(status)
+            tweet = await queue.get()
+            try:
+                await websocket.send_json(tweet)
+            except ConnectionClosed:
+                logger.info("WebSocket closed unexpectedly")
+                self.unsubscribe()
 
     async def on_disconnect(self, websocket, close_code):
-        logger.info("WebSocket disconnected")
+        logger.info("WebSocket disconnected by client")
         self.unsubscribe()
 
 
