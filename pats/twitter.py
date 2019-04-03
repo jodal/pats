@@ -51,7 +51,7 @@ class Stream:
     def unsubscribe(self, sub_id: uuid.UUID) -> None:
         del self._subscribers[sub_id]
         if not self._subscribers:
-            self._disconnect()
+            asyncio.create_task(self._disconnect_soon())
 
     async def _connect(self) -> None:
         if self._running.is_set():
@@ -78,6 +78,13 @@ class Stream:
 
         while self._running.is_set() and not response.connection.closed:
             await self._read_item(response)
+
+    async def _disconnect_soon(self) -> None:
+        minutes = 5
+        logger.info(f"{self}: Disconnecting in {minutes} minutes")
+        await asyncio.sleep(minutes * 60)
+        if not self._subscribers:
+            self._disconnect()
 
     def _disconnect(self) -> None:
         logger.info(f"{self}: Disconnecting now")
