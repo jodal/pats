@@ -36,6 +36,9 @@ class Stream:
         self._subscribers = {}
         self._running = asyncio.Event()
 
+    def __str__(self):
+        return f"Twitter {self.__class__.__name__}"
+
     def _subscribe(
         self, keywords: Optional[str] = None
     ) -> Tuple[uuid.UUID, asyncio.Queue]:
@@ -63,7 +66,7 @@ class Stream:
         response = await client.request(self.method, self.url, params=params)
 
         if response.status == 420:
-            logger.warning("Rate limited by Twitter; waiting 60s")
+            logger.warning(f"{self}: Rate limited by Twitter; waiting 60s")
             await asyncio.sleep(60)  # TODO Add exponential backoff
             self._running.clear()
             await self._connect()
@@ -71,13 +74,13 @@ class Stream:
 
         response.raise_for_status()
 
-        logger.info(f"Connected to Twitter {self.__class__.__name__}")
+        logger.info(f"{self}: Connected")
 
         while self._running.is_set() and not response.connection.closed:
             await self._read_item(response)
 
     def _disconnect(self) -> None:
-        logger.info(f"Disconnecting from Twitter {self.__class__.__name__}")
+        logger.info(f"{self}: Disconnecting now")
         self._running.clear()
 
     async def _read_item(self, response):
@@ -98,7 +101,7 @@ class Stream:
         try:
             data = json.loads(raw_data)
         except json.JSONDecodeError:
-            logger.warning(f"Ignored invalid JSON: {raw_data!r}")
+            logger.warning(f"{self}: Ignored invalid JSON: {raw_data!r}")
             return
 
         if "in_reply_to_status_id" not in data:
