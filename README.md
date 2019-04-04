@@ -1,4 +1,4 @@
-# PATS - Python asyncio Twitter Search
+# PATS - Python asyncio Twitter Stream
 
 ![Screenshot](screenshot.png)
 
@@ -13,7 +13,7 @@ using the [statuses/sample](https://developer.twitter.com/en/docs/tweets/sample-
 
 ### Filter view
 
-The filter view shows a stream of realtime tweets matching the search query,
+The filter view shows a stream of realtime tweets matching the query,
 using the [statuses/filter](https://developer.twitter.com/en/docs/tweets/filter-realtime/overview/statuses-filter) API.
 
 ## Constraints
