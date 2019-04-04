@@ -11,8 +11,8 @@ function connect() {
   );
 
   ws.onmessage = function(event) {
-    const status = JSON.parse(event.data);
-    addTweet(status);
+    const tweet = JSON.parse(event.data);
+    addTweet(tweet);
   };
 
   ws.onclose = function(event) {
