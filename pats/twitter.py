@@ -89,12 +89,7 @@ class Stream:
         self._running.set()
 
         params = {"delimited": "length"}
-        keywords = {
-            keyword
-            for subscription in self._subscribers.values()
-            if subscription.keywords
-            for keyword in subscription.keywords
-        }
+        keywords = self._get_keywords()
         if keywords:
             params["track"] = ",".join(keywords)
 
@@ -154,6 +149,18 @@ class Stream:
 
         for subscription in self._subscribers.values():
             await subscription.queue.put(data)
+
+    def _get_keywords(self) -> List[str]:
+        return sorted(
+            list(
+                set(
+                    keyword
+                    for subscription in self._subscribers.values()
+                    if subscription.keywords
+                    for keyword in subscription.keywords
+                )
+            )
+        )
 
 
 class SampleStream(Stream):
