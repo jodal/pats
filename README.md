@@ -137,3 +137,10 @@ $EDITOR .env
 ```sh
 python -m pats
 ```
+
+## Deployment
+
+The app is ready to be deployed to Heroku.
+Other than pushing the code to Heroku,
+you need to setup the Twitter credentials as Heroku config vars.
+See `dev-template.env` for the expected config vars.

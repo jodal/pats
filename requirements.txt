@@ -12,6 +12,7 @@ attrs==19.1.0             # via aiohttp
 bootstrap4==0.1.0
 chardet==3.0.4            # via aiohttp
 click==7.0                # via uvicorn
+gunicorn==19.9.0
 h11==0.8.1                # via uvicorn
 httptools==0.0.13         # via uvicorn
 idna==2.8                 # via yarl

@@ -1,8 +1,11 @@
+# Web server
+gunicorn
+
+# ASGI server
+uvicorn
+
 # ASGI web framework
 starlette
-
-# App server
-uvicorn
 
 # To serve static files
 aiofiles
