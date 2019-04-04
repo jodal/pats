@@ -12,6 +12,9 @@ import aiohttp
 from pats import settings
 
 
+STREAM_READ_TIMEOUT = 90
+
+
 logger = logging.getLogger()
 
 session = aiohttp.ClientSession()
@@ -93,7 +96,14 @@ class Stream:
         if keywords:
             params["track"] = ",".join(keywords)
 
-        response = await client.request(self.method, self.url, params=params)
+        response = await client.request(
+            self.method,
+            self.url,
+            params=params,
+            timeout=aiohttp.ClientTimeout(
+                total=STREAM_READ_TIMEOUT, sock_read=STREAM_READ_TIMEOUT
+            ),
+        )
 
         if response.status == 420:
             logger.warning(f"{self}: Rate limited by Twitter; waiting 60s")
