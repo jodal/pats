@@ -4,6 +4,7 @@ from typing import Optional
 from starlette.applications import Starlette
 from starlette.endpoints import WebSocketEndpoint
 from starlette.responses import FileResponse
+from starlette.routing import Mount, Route, Router
 from starlette.staticfiles import StaticFiles
 
 from websockets.exceptions import ConnectionClosed
@@ -13,18 +14,27 @@ from pats import settings, twitter
 
 logger = logging.getLogger(__name__)
 
-sample_stream = twitter.SampleStream()
-filter_stream = twitter.FilterStream()
 
-app = Starlette(debug=settings.DEBUG)
-
-
-@app.route("/")
-async def homepage(request):
+async def client_home(request):
     return FileResponse("client/index.html")
 
 
-@app.websocket_route("/ws")
+client_app = Router(
+    routes=[
+        Route("/", endpoint=client_home, methods=["GET"]),
+        Mount(
+            "/",
+            app=StaticFiles(directory="client", packages=["bootstrap4"]),
+            name="static",
+        ),
+    ]
+)
+
+
+sample_stream = twitter.SampleStream()
+filter_stream = twitter.FilterStream()
+
+
 class TwitterStream(WebSocketEndpoint):
     encoding = "text"
     subscription: Optional[twitter.Subscription] = None
@@ -54,6 +64,6 @@ class TwitterStream(WebSocketEndpoint):
         self.subscription.unsubscribe()
 
 
-app.mount(
-    "/", StaticFiles(directory="client", packages=["bootstrap4"]), name="client"
-)
+app = Starlette(debug=settings.DEBUG)
+app.add_websocket_route("/ws", TwitterStream)
+app.mount("/", client_app)
