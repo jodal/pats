@@ -32,6 +32,9 @@ function addTweet(tweet) {
   tweetEl.querySelector(".screen-name").innerText = `@${
     tweet.user.screen_name
   }`;
+  tweetEl.querySelector(".link").href = `https://twitter.com/${
+    tweet.user.screen_name
+  }/status/${tweet.id_str}`;
   tweetEl.querySelector(".created-at").innerText = tweet.created_at;
   tweetEl.querySelector(".text").innerText = tweet.text;
   streamEl.prepend(tweetEl);
