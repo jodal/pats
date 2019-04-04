@@ -9,3 +9,6 @@ flake8
 
 # Type checking
 mypy
+
+# Test runner
+tox
