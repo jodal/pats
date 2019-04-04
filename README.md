@@ -1,5 +1,7 @@
 # PATS - Python asyncio Twitter Search
 
+![Screenshot](screenshot.png)
+
 A small tech demo featuring Python 3.7, asyncio, WebSockets, and Twitter.
 
 ## Features
