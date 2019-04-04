@@ -79,6 +79,15 @@ When tweets are received from the Filter API,
 they are relayed to the subscribed queues,
 but only if the tweets contents matches the subscription's keywords.
 
+Because the Twitter API rejects frequent reconnections,
+we don't disconnect immediately
+when the last browser disconnects from its WebSocket.
+Instead, we schedule a disconnect some time in the future,
+given that we still don't have any subscribers at that point in time.
+This allows for the last visitor to navigate back and forth and
+reload the page without getting banned from Twitter
+because of too many reconnections.
+
 ## Scaling considerations
 
 Given the above Twitter API connection constraints,
