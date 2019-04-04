@@ -2,7 +2,8 @@ import asyncio
 import logging
 import json
 import uuid
-from typing import Optional, Tuple
+from dataclasses import dataclass
+from typing import Callable, List, Optional
 
 from aioauth_client import TwitterClient
 
@@ -28,6 +29,35 @@ client = TwitterClient(
 client._request = session.request
 
 
+UnsubscribeFunc = Callable[["Subscription"], None]
+
+
+@dataclass
+class Subscription:
+    id: uuid.UUID
+    queue: asyncio.Queue
+    keywords: List[str]
+    unsubscribe_func: Optional[UnsubscribeFunc] = None
+
+    @classmethod
+    def new(
+        cls,
+        keywords: Optional[List[str]] = None,
+        unsubscribe_func: Optional[UnsubscribeFunc] = None,
+    ) -> "Subscription":
+        return cls(
+            id=uuid.uuid4(),
+            queue=asyncio.Queue(),
+            keywords=keywords or [],
+            unsubscribe_func=unsubscribe_func,
+        )
+
+    def unsubscribe(self):
+        if self.unsubscribe_func is None:
+            return
+        self.unsubscribe_func(self)
+
+
 class Stream:
     method: str
     url: str
@@ -39,17 +69,17 @@ class Stream:
     def __str__(self):
         return f"Twitter {self.__class__.__name__}"
 
-    def _subscribe(
-        self, keywords: Optional[str] = None
-    ) -> Tuple[uuid.UUID, asyncio.Queue]:
-        sub_id: uuid.UUID = uuid.uuid4()
-        queue: asyncio.Queue = asyncio.Queue()
-        self._subscribers[sub_id] = (queue, keywords)
+    def _subscribe(self, keywords: Optional[List[str]] = None) -> Subscription:
+        subscription = Subscription.new(
+            keywords=keywords, unsubscribe_func=self.unsubscribe
+        )
+        self._subscribers[subscription.id] = subscription
         asyncio.create_task(self._connect())
-        return (sub_id, queue)
+        return subscription
 
-    def unsubscribe(self, sub_id: uuid.UUID) -> None:
-        del self._subscribers[sub_id]
+    def unsubscribe(self, subscription: Subscription) -> None:
+        if subscription.id in self._subscribers:
+            del self._subscribers[subscription.id]
         if not self._subscribers:
             asyncio.create_task(self._disconnect_soon())
 
@@ -59,7 +89,12 @@ class Stream:
         self._running.set()
 
         params = {"delimited": "length"}
-        keywords = {k for (_, k) in self._subscribers.values() if k is not None}
+        keywords = {
+            keyword
+            for subscription in self._subscribers.values()
+            if subscription.keywords
+            for keyword in subscription.keywords
+        }
         if keywords:
             params["track"] = ",".join(keywords)
 
@@ -117,15 +152,15 @@ class Stream:
         if data.get("lang") not in ["en", "no"]:
             return  # Ignore everything but English and Norwegian
 
-        for (queue, _) in self._subscribers.values():
-            await queue.put(data)
+        for subscription in self._subscribers.values():
+            await subscription.queue.put(data)
 
 
 class SampleStream(Stream):
     method = "GET"
     url = "https://stream.twitter.com/1.1/statuses/sample.json"
 
-    def subscribe(self) -> Tuple[uuid.UUID, asyncio.Queue]:
+    def subscribe(self) -> Subscription:
         return self._subscribe()
 
 
@@ -133,7 +168,7 @@ class FilterStream(Stream):
     method = "POST"
     url = "https://stream.twitter.com/1.1/statuses/filter.json"
 
-    def subscribe(self, keywords: str) -> Tuple[uuid.UUID, asyncio.Queue]:
+    def subscribe(self, keywords: List[str]) -> Subscription:
         assert keywords
         return self._subscribe(keywords=keywords)
 

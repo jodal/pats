@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from starlette.applications import Starlette
 from starlette.endpoints import WebSocketEndpoint
@@ -26,6 +27,7 @@ async def homepage(request):
 @app.websocket_route("/ws")
 class TwitterStream(WebSocketEndpoint):
     encoding = "text"
+    subscription: Optional[twitter.Subscription] = None
 
     async def on_connect(self, websocket):
         keywords = websocket.query_params.get("filter")
@@ -34,24 +36,22 @@ class TwitterStream(WebSocketEndpoint):
         logger.info(f"WebSocket connected (filter: {keywords})")
 
         if keywords:
-            sub_id, queue = filter_stream.subscribe(keywords)
-            self.unsubscribe = lambda: filter_stream.unsubscribe(sub_id)
+            self.subscription = filter_stream.subscribe(keywords.split(","))
         else:
-            sub_id, queue = sample_stream.subscribe()
-            self.unsubscribe = lambda: sample_stream.unsubscribe(sub_id)
+            self.subscription = sample_stream.subscribe()
 
         while True:
-            tweet = await queue.get()
+            tweet = await self.subscription.queue.get()
             try:
                 await websocket.send_json(tweet)
             except ConnectionClosed:
                 logger.info("WebSocket closed unexpectedly")
-                self.unsubscribe()
+                self.subscription.unsubscribe()
                 return
 
     async def on_disconnect(self, websocket, close_code):
         logger.info("WebSocket disconnected by client")
-        self.unsubscribe()
+        self.subscription.unsubscribe()
 
 
 app.mount(
