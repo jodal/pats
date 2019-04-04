@@ -24,16 +24,16 @@ function connect() {
 const tweetTemplate = document.querySelector("template#tweet");
 const streamEl = document.querySelector("#stream");
 
-function addTweet(status) {
+function addTweet(tweet) {
   const tweetEl = document.importNode(tweetTemplate.content, true);
   tweetEl.querySelector(".profile-img").src =
-    status.user.profile_image_url_https;
-  tweetEl.querySelector(".name").innerText = status.user.name;
+    tweet.user.profile_image_url_https;
+  tweetEl.querySelector(".name").innerText = tweet.user.name;
   tweetEl.querySelector(".screen-name").innerText = `@${
-    status.user.screen_name
+    tweet.user.screen_name
   }`;
-  tweetEl.querySelector(".created-at").innerText = status.created_at;
-  tweetEl.querySelector(".text").innerText = status.text;
+  tweetEl.querySelector(".created-at").innerText = tweet.created_at;
+  tweetEl.querySelector(".text").innerText = tweet.text;
   streamEl.prepend(tweetEl);
 
   // TODO Trim length of page to not use infinite memory

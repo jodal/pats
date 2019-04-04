@@ -137,21 +137,21 @@ class Stream:
         data = await response.content.readexactly(length)
         await self._on_data(data)
 
-    async def _on_data(self, raw_data: bytes) -> None:
+    async def _on_data(self, data: bytes) -> None:
         try:
-            data = json.loads(raw_data)
+            tweet = json.loads(data)
         except json.JSONDecodeError:
-            logger.warning(f"{self}: Ignored invalid JSON: {raw_data!r}")
+            logger.warning(f"{self}: Ignored invalid JSON: {data!r}")
             return
 
-        if "in_reply_to_status_id" not in data:
+        if "in_reply_to_status_id" not in tweet:
             return  # Ignore everything but status updates
 
-        if data.get("lang") not in ["en", "no"]:
+        if tweet.get("lang") not in ["en", "no"]:
             return  # Ignore everything but English and Norwegian
 
         for subscription in self._subscribers.values():
-            await subscription.queue.put(data)
+            await subscription.queue.put(tweet)
 
     def _get_keywords(self) -> List[str]:
         return sorted(
