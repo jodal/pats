@@ -47,6 +47,7 @@ class TwitterStream(WebSocketEndpoint):
             except ConnectionClosed:
                 logger.info("WebSocket closed unexpectedly")
                 self.unsubscribe()
+                return
 
     async def on_disconnect(self, websocket, close_code):
         logger.info("WebSocket disconnected by client")
