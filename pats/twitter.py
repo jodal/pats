@@ -147,8 +147,8 @@ class Stream:
         if "in_reply_to_status_id" not in tweet:
             return  # Ignore everything but status updates
 
-        if tweet.get("lang") not in ["en", "no"]:
-            return  # Ignore everything but English and Norwegian
+        if tweet.get("lang") not in settings.TWITTER_LANGUAGES:
+            return  # Ignore tweets in other languages
 
         for subscription in self._subscribers.values():
             await subscription.queue.put(tweet)
