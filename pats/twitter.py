@@ -3,7 +3,7 @@ import logging
 import json
 import uuid
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from aioauth_client import TwitterClient
 
@@ -33,6 +33,7 @@ client._request = session.request
 
 
 UnsubscribeFunc = Callable[["Subscription"], None]
+Tweet = Dict
 
 
 @dataclass
@@ -67,7 +68,9 @@ class Stream:
 
     def __init__(self):
         self._subscribers = {}
-        self._running = asyncio.Event()
+        self._running = False
+        self._connection = None
+        self._connection_keywords = []
 
     def __str__(self):
         return f"Twitter {self.__class__.__name__}"
@@ -77,7 +80,7 @@ class Stream:
             keywords=keywords, unsubscribe_func=self.unsubscribe
         )
         self._subscribers[subscription.id] = subscription
-        asyncio.create_task(self._connect())
+        asyncio.create_task(self._connect_or_reconnect())
         return subscription
 
     def unsubscribe(self, subscription: Subscription) -> None:
@@ -86,13 +89,38 @@ class Stream:
         if not self._subscribers:
             asyncio.create_task(self._disconnect_soon())
 
+    def _get_subscription_keywords(self) -> List[str]:
+        return sorted(
+            list(
+                set(
+                    keyword
+                    for subscription in self._subscribers.values()
+                    if subscription.keywords
+                    for keyword in subscription.keywords
+                )
+            )
+        )
+
+    def _is_connected(self) -> bool:
+        return bool(
+            self._running and self._connection and not self._connection.closed
+        )
+
+    async def _connect_or_reconnect(self) -> None:
+        if not self._is_connected():
+            await self._connect()
+        elif self._connection_keywords != self._get_subscription_keywords():
+            await self._reconnect()
+        else:
+            pass  # Connected with the correct filters
+
     async def _connect(self) -> None:
-        if self._running.is_set():
+        if self._is_connected():
             return
-        self._running.set()
+        self._running = True
 
         params = {"delimited": "length"}
-        keywords = self._get_keywords()
+        keywords = self._get_subscription_keywords()
         if keywords:
             params["track"] = ",".join(keywords)
 
@@ -101,15 +129,17 @@ class Stream:
         if response.status == 420:
             logger.warning(f"{self}: Rate limited by Twitter; waiting 60s")
             await asyncio.sleep(60)  # TODO Add exponential backoff
-            self._running.clear()
+            self._running = False
             await self._connect()
             return
 
         response.raise_for_status()
 
-        logger.info(f"{self}: Connected")
+        self._connection = response.connection
+        self._connection_keywords = keywords
+        logger.info(f"{self}: Connected (filter: {','.join(keywords)})")
 
-        while self._running.is_set() and not response.connection.closed:
+        while self._is_connected():
             await self._read_item(response)
 
     async def _disconnect_soon(self) -> None:
@@ -121,12 +151,29 @@ class Stream:
 
     def _disconnect(self) -> None:
         logger.info(f"{self}: Disconnecting now")
-        self._running.clear()
+        self._running = False
+
+    async def _reconnect(self) -> None:
+        logger.info(
+            f"{self}: Disconnecting "
+            f"(filter: {','.join(self._connection_keywords)})"
+        )
+        self._running = False
+        while self._connection and not self._connection.closed:
+            asyncio.sleep(0.01)
+
+        logger.info(
+            f"{self}: Connecting "
+            f"(filter: {','.join(self._get_subscription_keywords())})"
+        )
+        await self._connect()
 
     async def _read_item(self, response):
         length = 0
-        while not response.connection.closed:
-            line = await response.content.readline()
+        while self._is_connected():
+            line = (
+                await response.content.readline()
+            )  # TODO Break out of this to disconnect?
             line = line.strip() if line else line
             if not line:
                 pass  # keep-alive
@@ -150,20 +197,10 @@ class Stream:
         if tweet.get("lang") not in settings.TWITTER_LANGUAGES:
             return  # Ignore tweets in other languages
 
-        for subscription in self._subscribers.values():
-            await subscription.queue.put(tweet)
+        await self._broadcast(tweet)
 
-    def _get_keywords(self) -> List[str]:
-        return sorted(
-            list(
-                set(
-                    keyword
-                    for subscription in self._subscribers.values()
-                    if subscription.keywords
-                    for keyword in subscription.keywords
-                )
-            )
-        )
+    async def _broadcast(self, tweet: Tweet) -> None:
+        raise NotImplementedError
 
 
 class SampleStream(Stream):
@@ -173,6 +210,10 @@ class SampleStream(Stream):
     def subscribe(self) -> Subscription:
         return self._subscribe()
 
+    async def _broadcast(self, tweet: Tweet) -> None:
+        for subscription in self._subscribers.values():
+            await subscription.queue.put(tweet)
+
 
 class FilterStream(Stream):
     method = "POST"
@@ -180,6 +221,14 @@ class FilterStream(Stream):
 
     def subscribe(self, keywords: List[str]) -> Subscription:
         assert keywords
-        return self._subscribe(keywords=keywords)
+        subscription = self._subscribe(keywords=keywords)
+        return subscription
 
-    # TODO Reconnect when new keywords are subscribed to
+    async def _broadcast(self, tweet: Tweet) -> None:
+        for subscription in self._subscribers.values():
+            matching = any(
+                keyword.lower() in tweet["text"].lower()
+                for keyword in subscription.keywords
+            )
+            if matching:
+                await subscription.queue.put(tweet)
